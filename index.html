@@ -29,8 +29,10 @@
             position: absolute;
             display: none; /* Прячем Дигги до нахождения QR-кода */
             width: 150px; /* Размер твоего стикера */
-            transform: translate(-50%, -50%); /* Центруем стикер ровно по координатам */
+            transform: translate(-50%, -50%); /* Базовая центровка */
             z-index: 999;
+            /* Плавность, чтобы при поворотах стикер не дергался: */
+            transition: transform 0.1s ease-out, left 0.1s ease-out, top 0.1s ease-out; 
         }
     </style>
 </head>
@@ -76,16 +78,19 @@
                 });
 
                 if (code) {
-                    // Если нашли QR-код:
+                    // --- МАТЕМАТИКА КООРДИНАТ И УГЛА ---
                     
-                    // Высчитываем центр QR-кода (усредняем углы)
+                    // Высчитываем центр QR-кода 
                     var centerX = (code.location.topLeftCorner.x + code.location.bottomRightCorner.x) / 2;
                     var centerY = (code.location.topLeftCorner.y + code.location.bottomRightCorner.y) / 2;
 
-                    // Учитываем масштабирование экрана (если телефон вытянутый)
+                    // Вычисляем угол наклона QR-кода в пространстве
+                    var deltaX = code.location.topRightCorner.x - code.location.topLeftCorner.x;
+                    var deltaY = code.location.topRightCorner.y - code.location.topLeftCorner.y;
+                    var angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+
+                    // Учитываем масштабирование экрана (object-fit: cover)
                     var rect = video.getBoundingClientRect();
-                    
-                    // Хитрый пересчет координат из-за object-fit: cover
                     var scale = Math.max(rect.width / video.videoWidth, rect.height / video.videoHeight);
                     var xOffset = (rect.width - video.videoWidth * scale) / 2;
                     var yOffset = (rect.height - video.videoHeight * scale) / 2;
@@ -93,17 +98,20 @@
                     var finalX = centerX * scale + xOffset;
                     var finalY = centerY * scale + yOffset;
 
-                    // Показываем Дигги и ставим его ровно в центр QR-кода
+                    // --- ОТРИСОВКА ---
                     sticker.style.display = "block";
                     sticker.style.left = finalX + "px";
                     sticker.style.top = finalY + "px";
+                    
+                    // Оставляем центровку и добавляем вычисленный угол поворота
+                    sticker.style.transform = "translate(-50%, -50%) rotate(" + angle + "deg)";
 
                 } else {
                     // Если камера потеряла QR-код - прячем Дигги
                     sticker.style.display = "none";
                 }
             }
-            // Вызываем функцию снова для следующего кадра (60 раз в секунду)
+            // Вызываем функцию снова для следующего кадра
             requestAnimationFrame(tick);
         }
     </script>
